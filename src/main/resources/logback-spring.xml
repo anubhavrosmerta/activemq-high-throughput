@@ -1,0 +1,40 @@
+<configuration>
+
+    <!-- ✅ Console appender to see logs in console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ✅ Async appender wraps FILE appender -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>10000</queueSize>          <!-- buffer size (10k log events in memory) -->
+        <discardingThreshold>0</discardingThreshold> <!-- 0 = never drop logs -->
+        <appender-ref ref="FILE"/>
+    </appender>
+
+    <!-- ✅ File appender with rolling policy -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>hithroughput.log</file>
+
+        <!-- ✅ SizeAndTimeBasedRollingPolicy allows %i -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>hithroughput-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>        <!-- roll over if file exceeds 100MB -->
+            <maxHistory>7</maxHistory>             <!-- keep logs for 7 days -->
+            <totalSizeCap>1GB</totalSizeCap>       <!-- optional total size cap -->
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ✅ Root logger using async file and console -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

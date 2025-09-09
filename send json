@@ -1,0 +1,44 @@
+postmapping -> localhost:8080/gps/publish
+
+{
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+
+
+at sts response rcv
+==================
+
+Published GPS data: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+Received GPS: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+Received GPS: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+Received GPS: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+Received GPS: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+Received GPS: {
+    "vehicleId": "DL01AB1234",
+    "lat": 28.6139,
+    "lon": 77.2090
+}
+
+5 times because parallel define 5 process 
