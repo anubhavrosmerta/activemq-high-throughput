@@ -1,6 +1,12 @@
 # activemq-high-throughput
 activemq with high throughput for testing
 
+![executionprocess](./activemq%20execution%20report%20in%20batches.png)
+
+![performance](./activemq%20highthroughput%20.png)
+here recheck pending 
+
+
 *** it’s **high-throughput + no-loss + scalable**:
 
 ---
