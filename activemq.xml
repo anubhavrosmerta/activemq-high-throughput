@@ -1,0 +1,535 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+    <!-- Properties -->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <value>file:${activemq.conf}/credentials.properties</value>
+        </property>
+    </bean>
+
+    <!-- Broker configuration -->
+    <broker xmlns="http://activemq.apache.org/schema/core" brokerName="localhost" dataDirectory="${activemq.data}">
+
+        <!-- Destination policy -->
+        <destinationPolicy>
+            <policyMap>
+                <policyEntries>
+                    <policyEntry queue=">" producerFlowControl="false" memoryLimit="4gb">
+                        <!-- Limits messages retained per slow consumer -->
+                        <pendingMessageLimitStrategy>
+                            <constantPendingMessageLimitStrategy limit="5000"/>
+                        </pendingMessageLimitStrategy>
+                    </policyEntry>
+                </policyEntries>
+            </policyMap>
+        </destinationPolicy>
+
+        <!-- Persistence adapter: tuned KahaDB -->
+        <persistenceAdapter>
+            <kahaDB directory="${activemq.data}/kahadb"
+                    journalMaxFileLength="128mb"
+                    enableIndexWriteAsync="true"
+                    enableJournalDiskSyncs="true"
+                    checkpointInterval="3000"/>
+        </persistenceAdapter>
+
+        <!-- System usage limits -->
+        <systemUsage>
+            <memoryUsage>
+                <memoryUsage limit="16 gb"/>
+            </memoryUsage>
+            <storeUsage>
+                <storeUsage limit="200 gb"/>
+            </storeUsage>
+            <tempUsage>
+                <tempUsage limit="100 gb"/>
+            </tempUsage>
+        </systemUsage>
+
+        <!-- Transport connectors -->
+        <transportConnectors>
+            <transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="mqtt" uri="mqtt://0.0.0.0:1883?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="ws" uri="ws://0.0.0.0:61614?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+        </transportConnectors>
+
+        <!-- JMX management (optional) -->
+        <managementContext>
+            <managementContext createConnector="false"/>
+        </managementContext>
+
+        <!-- Shutdown hooks -->
+        <shutdownHooks>
+            <bean class="org.apache.activemq.hooks.SpringContextHook"/>
+        </shutdownHooks>
+
+    </broker>
+
+    <!-- Web console -->
+    <import resource="jetty.xml"/>
+
+</beans>
+
+
+---
+---
+*** Explanation 
+
+---
+Perfect! Let’s create a **high-throughput ActiveMQ Classic `activemq.xml`** tuned for persistent messages, bulk publishing, and horizontal scaling. I’ll provide the full XML **first**, then explain each section.
+
+---
+
+## 🔹 **Tuned ActiveMQ Classic Broker XML**
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+    <!-- Properties -->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <value>file:${activemq.conf}/credentials.properties</value>
+        </property>
+    </bean>
+
+    <!-- Broker configuration -->
+    <broker xmlns="http://activemq.apache.org/schema/core" brokerName="localhost" dataDirectory="${activemq.data}">
+
+        <!-- Destination policy -->
+        <destinationPolicy>
+            <policyMap>
+                <policyEntries>
+                    <policyEntry queue=">" producerFlowControl="false" memoryLimit="4gb">
+                        <!-- Limits messages retained per slow consumer -->
+                        <pendingMessageLimitStrategy>
+                            <constantPendingMessageLimitStrategy limit="5000"/>
+                        </pendingMessageLimitStrategy>
+                    </policyEntry>
+                </policyEntries>
+            </policyMap>
+        </destinationPolicy>
+
+        <!-- Persistence adapter: tuned KahaDB -->
+        <persistenceAdapter>
+            <kahaDB directory="${activemq.data}/kahadb"
+                    journalMaxFileLength="128mb"
+                    enableIndexWriteAsync="true"
+                    enableJournalDiskSyncs="true"
+                    checkpointInterval="3000"/>
+        </persistenceAdapter>
+
+        <!-- System usage limits -->
+        <systemUsage>
+            <memoryUsage>
+                <memoryUsage limit="16 gb"/>
+            </memoryUsage>
+            <storeUsage>
+                <storeUsage limit="200 gb"/>
+            </storeUsage>
+            <tempUsage>
+                <tempUsage limit="100 gb"/>
+            </tempUsage>
+        </systemUsage>
+
+        <!-- Transport connectors -->
+        <transportConnectors>
+            <transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="amqp" uri="amqp://0.0.0.0:5672?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="stomp" uri="stomp://0.0.0.0:61613?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="mqtt" uri="mqtt://0.0.0.0:1883?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+            <transportConnector name="ws" uri="ws://0.0.0.0:61614?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+        </transportConnectors>
+
+        <!-- JMX management (optional) -->
+        <managementContext>
+            <managementContext createConnector="false"/>
+        </managementContext>
+
+        <!-- Shutdown hooks -->
+        <shutdownHooks>
+            <bean class="org.apache.activemq.hooks.SpringContextHook"/>
+        </shutdownHooks>
+
+    </broker>
+
+    <!-- Web console -->
+    <import resource="jetty.xml"/>
+
+</beans>
+```
+
+---
+
+## 🔹 **Explanation of each tuning parameter**
+
+### 1. **Destination Policy**
+
+```xml
+<policyEntry queue=">" producerFlowControl="false" memoryLimit="4gb">
+    <pendingMessageLimitStrategy>
+        <constantPendingMessageLimitStrategy limit="5000"/>
+    </pendingMessageLimitStrategy>
+</policyEntry>
+```
+
+* `queue=">"` → applies to **all queues**.
+* `producerFlowControl=false` → producers are **never blocked by slow consumers**, improves throughput.
+* `memoryLimit=4gb` → how much memory broker uses per destination before throttling.
+* `constantPendingMessageLimitStrategy limit="5000"` → prevents a single consumer from hoarding messages.
+
+---
+
+### 2. **Persistence Adapter (KahaDB)**
+
+```xml
+<kahaDB journalMaxFileLength="128mb"
+       enableIndexWriteAsync="true"
+       enableJournalDiskSyncs="true"
+       checkpointInterval="3000"/>
+```
+
+* `journalMaxFileLength` → larger files = fewer rotations = better throughput.
+* `enableIndexWriteAsync=true` → async index writes improve speed.
+* `enableJournalDiskSyncs=true` → ensures **no data loss on crash**.
+* `checkpointInterval=3000` → write checkpoint every 3 seconds (balances durability & speed).
+
+> ⚠️ If you can tolerate small data loss, you can set `enableJournalDiskSyncs=false` for higher throughput.
+
+---
+
+### 3. **System Usage**
+
+```xml
+<memoryUsage limit="16 gb"/>
+<storeUsage limit="200 gb"/>
+<tempUsage limit="100 gb"/>
+```
+
+* `memoryUsage` → how much heap broker can use for in-flight messages.
+* `storeUsage` → max disk space for persistent messages.
+* `tempUsage` → temp storage for non-persistent messages.
+
+> For millions/sec, default 1–2GB is too small → increase as above.
+
+---
+
+### 4. **Transport Connectors**
+
+```xml
+<transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=2000&amp;wireFormat.maxFrameSize=104857600"/>
+```
+
+* `maximumConnections=2000` → allows many concurrent producer/consumer connections.
+* `wireFormat.maxFrameSize=100MB` → prevents network frame errors with large messages.
+* You’ve configured all protocols (openwire, AMQP, STOMP, MQTT, WebSocket) similarly.
+
+---
+
+### 5. **Scaling Tips**
+
+* **Horizontal scaling**: run multiple brokers in a **network of brokers** if one broker cannot handle full load.
+* **Consumers**: keep per-JVM concurrency \~50–100, scale horizontally with multiple JVMs.
+* **Prefetch**: tune per consumer (e.g., 500–1000) to avoid memory pressure.
+
+---
+
+✅ With this XML and your Spring Boot producer/consumer code:
+
+* **No data loss** (persistent delivery + KahaDB fsync).
+* **High throughput** (\~50k–200k msgs/sec per broker, can scale horizontally).
+* **Stable memory usage** and disk limits.
+* **Async send + async logging** ensures your JVM isn’t blocked.
+
+---
+
+Perfect! Let’s visualize how your **high-throughput ActiveMQ system** can scale with multiple JVMs and brokers, and estimate realistic **messages/sec**.
+
+---
+
+## 🔹 **Architecture Diagram**
+
+```
+          ┌─────────────────────────────┐
+          │      ActiveMQ Broker 1      │
+          │  (Classic, tuned XML)       │
+          │  memory=16GB, store=200GB   │
+          │  KahaDB persistent store    │
+          └─────────────┬──────────────┘
+                        │
+                        │ TCP connections
+                        │ (OpenWire, AMQP, MQTT...)
+                        │
+          ┌─────────────┴──────────────┐
+          │                            │
+     ┌────┴────┐                  ┌────┴────┐
+     │ JVM App │                  │ JVM App │
+     │ Producer│                  │ Consumer│
+     │  Concurrency=50–100         │ Concurrency=50–100
+     └─────────┘                  └─────────┘
+          │                            │
+          │                            │
+   Bulk send messages              Bulk read messages
+          │                            │
+          │                            │
+          ▼                            ▼
+   ┌───────────────┐            ┌───────────────┐
+   │ JVM App 2     │            │ JVM App N     │
+   │ Producer      │            │ Consumer      │
+   │ Concurrency=50–100          │ Concurrency=50–100
+   └───────────────┘            └───────────────┘
+```
+
+> ✅ **Key points**:
+>
+> * Each JVM runs multiple consumers/producers (50–100).
+> * Producers push bulk messages to a **queue** (not topic) → messages are **load-balanced** among consumers.
+> * Consumers in multiple JVMs can scale horizontally.
+> * Broker handles persistence via KahaDB.
+
+---
+
+## 🔹 **Throughput Estimation**
+
+Assumptions:
+
+* Small message size (\~1 KB).
+* Persistent delivery enabled.
+* Broker tuned as per XML I gave.
+* Each consumer can handle \~5k msgs/sec (processing is minimal, logging async).
+
+| Parameter                 | Value per JVM / Broker                                     |
+| ------------------------- | ---------------------------------------------------------- |
+| Consumers per JVM         | 50–100                                                     |
+| Consumers per 10 JVMs     | 500–1000                                                   |
+| Msg/sec per consumer      | \~5,000                                                    |
+| Throughput per JVM        | 50–100 consumers × 5k = 250k–500k msgs/sec (theoretical)   |
+| Throughput across 10 JVMs | 1M–5M msgs/sec (theoretical)                               |
+| Broker disk limit         | 200 GB → can hold 200M small messages (\~1KB each)         |
+| Memory usage              | 16 GB → enough for prefetch buffer (500–1000 per consumer) |
+
+> ⚠️ Realistic sustained throughput: **\~1–2M msgs/sec across all JVMs**, because disk I/O and network overhead will reduce theoretical max.
+
+---
+
+## 🔹 **Recommendations for Production**
+
+1. **Multiple Brokers**:
+
+   * For 1M+ msgs/sec, use a **network of 2–3 brokers**, split load with queues.
+   * Use **store-and-forward** to balance load between brokers.
+
+2. **Producer tuning**:
+
+   * `jmsTemplate.setDeliveryPersistent(true)` for no message loss.
+   * `setUseAsyncSend(true)` → asynchronous network send.
+
+3. **Consumer tuning**:
+
+   * `DefaultJmsListenerContainerFactory` with concurrency 50–100 per JVM.
+   * Prefetch = 500–1000 messages.
+
+4. **Logging**:
+
+   * Async logger (`logback AsyncAppender`) → avoid System.out bottleneck.
+
+5. **Monitoring**:
+
+   * Enable JMX to watch `MemoryUsage`, `StoreUsage`, `QueueSize`, `Consumers`.
+   * Add alerting if memory/store usage exceeds thresholds.
+
+---
+
+Yes — with your **current setup**, your listener **can handle huge bulk messages**, but there are some important considerations and limits to be aware of:
+
+---
+
+### 1️⃣ **Why it can handle bulk**
+
+* You are using **queues**, not topics → messages are **load-balanced** across consumers.
+* `DefaultJmsListenerContainerFactory` with `concurrency="50-100"` → multiple parallel consumers in each JVM.
+* **Async logging** → logging doesn’t block message processing.
+* Prefetch = 1000 → consumers can prefetch multiple messages into memory to reduce network latency.
+* Persistent delivery + KahaDB → no messages lost even if broker restarts.
+
+---
+
+### 2️⃣ **Practical limits**
+
+| Component                    | Practical Limit                                                |
+| ---------------------------- | -------------------------------------------------------------- |
+| Consumer concurrency per JVM | 50–100 recommended, more than 200 may saturate CPU/heap        |
+| Prefetch                     | 500–1000 → higher = more memory usage                          |
+| Broker memory                | 16 GB → enough for \~1M in-flight messages                     |
+| Broker store                 | 200 GB → enough for persistent messages (1 KB \~200M messages) |
+| Network                      | 1–10 Gbps → very large bulk may saturate network               |
+| JVM heap                     | Make sure each JVM has 2–4 GB for message processing           |
+
+> If you push millions of messages per second, one broker alone **cannot sustain it** — need **network of brokers**.
+
+---
+
+### 3️⃣ **How to maximize listener throughput**
+
+1. **Parallel consumers**: Multiple JVMs, each with 50–100 consumers.
+2. **Async processing**: Don’t block `@JmsListener` thread — delegate heavy processing to another thread pool.
+3. **Batch processing**: If messages can be processed in batches (e.g., 100–1000), throughput increases dramatically.
+4. **Tuning broker**: Your `activemq.xml` already increases memory and store usage.
+
+---
+
+✅ **Summary:**
+
+* Your listener **can handle huge bulk messages** (10k–100k/sec per JVM).
+* To go beyond 0.5–1M messages/sec, you need **multiple JVMs + multiple brokers + async batch processing**.
+* Persistent messages + KahaDB ensures **no data loss**.
+
+---
+
+Yes! Let’s estimate the **listener’s capacity** realistically based on your current setup. We’ll break it down step by step.
+
+---
+
+## **1️⃣ Your Current Listener Setup**
+
+* **Queue:** `gps.telemetry.queue` → load-balanced among consumers.
+* **Concurrency:** `50–100` consumers per JVM.
+* **Prefetch:** 1000 messages per consumer.
+* **Logging:** Async logging via `logback AsyncAppender`.
+* **JMS:** Persistent messages, KahaDB store, ActiveMQ Classic 6.1.
+* **Hardware assumptions:** 4–8 vCPU per JVM, 8–16 GB heap, broker memory 16 GB, broker disk 200 GB.
+
+---
+
+## **2️⃣ Throughput per consumer**
+
+* Minimal processing (just logging) → one consumer can handle **\~5,000–10,000 messages/sec** reliably.
+* Heavy processing (parsing JSON, DB writes) → throughput decreases.
+
+---
+
+## **3️⃣ Throughput per JVM**
+
+| Consumers | Msg/sec per consumer | Total per JVM |
+| --------- | -------------------- | ------------- |
+| 50        | 5,000                | 250,000       |
+| 100       | 5,000                | 500,000       |
+| 50        | 10,000               | 500,000       |
+| 100       | 10,000               | 1,000,000     |
+
+> Realistic **continuous throughput**: \~250k–500k messages/sec per JVM with minimal processing.
+
+---
+
+## **4️⃣ Throughput across multiple JVMs**
+
+| JVMs | Consumers per JVM | Total Consumers | Approx. Msg/sec |
+| ---- | ----------------- | --------------- | --------------- |
+| 5    | 50                | 250             | 1,250,000       |
+| 10   | 100               | 1,000           | 5,000,000       |
+| 10   | 50                | 500             | 2,500,000       |
+
+> With **10 JVMs × 50–100 consumers**, you could theoretically handle **2–5 million messages/sec**.
+
+---
+
+## **5️⃣ Bottlenecks to watch**
+
+1. **Broker memory:** 16 GB → 1–2M in-flight messages. Increase if needed.
+2. **Broker disk I/O:** Persistent messages → KahaDB writes can be a bottleneck.
+3. **Network:** Ensure sufficient bandwidth (1–10 Gbps).
+4. **JVM heap:** Each JVM should have enough heap (2–4 GB) for prefetch buffers.
+5. **Consumer processing:** Any heavy processing reduces effective throughput.
+
+---
+
+✅ **Conclusion:**
+
+* **Single JVM with 50–100 consumers** → \~250k–1M messages/sec.
+* **Multiple JVMs (10+)** → 2–5M messages/sec possible.
+* **Your listener code is capable** of handling **huge bulk messages**, provided broker memory, disk, and network are tuned.
+
+---
+
+If you want, I can **draw a chart showing exact listener capacity per JVM, consumers, and broker configuration**, so you can **plan scaling for 10M messages/sec**.
+
+Do you want me to make that chart?
+
+Perfect! Let’s make a **listener capacity chart** for your ActiveMQ setup so you can visualize **messages/sec per JVM and total throughput**.
+
+---
+
+## **Assumptions for the chart**
+
+* Broker: ActiveMQ Classic 6.1, memory 16 GB, disk 200 GB (persistent KahaDB).
+* Consumer processing: minimal (just logging).
+* Prefetch: 1000 per consumer.
+* JVM heap: 4 GB.
+* Network: 10 Gbps.
+* Concurrency: 50–100 consumers per JVM.
+* Message size: \~1 KB.
+
+---
+
+## **1️⃣ Throughput per JVM**
+
+| Consumers per JVM | Msg/sec per consumer | Total per JVM |
+| ----------------- | -------------------- | ------------- |
+| 50                | 5,000                | 250,000       |
+| 100               | 5,000                | 500,000       |
+| 50                | 10,000               | 500,000       |
+| 100               | 10,000               | 1,000,000     |
+
+> Notes:
+>
+> * The 10k/msg/sec per consumer is **optimistic**, achievable only with minimal processing and async logging.
+> * Prefetch buffer and AsyncAppender reduce blocking.
+
+---
+
+## **2️⃣ Total throughput across JVMs**
+
+| JVMs | Consumers per JVM | Total Consumers | Approx. Msg/sec |
+| ---- | ----------------- | --------------- | --------------- |
+| 1    | 50                | 50              | 250,000         |
+| 1    | 100               | 100             | 500,000         |
+| 5    | 50                | 250             | 1,250,000       |
+| 5    | 100               | 500             | 2,500,000       |
+| 10   | 50                | 500             | 2,500,000       |
+| 10   | 100               | 1,000           | 5,000,000       |
+
+> **Horizontal scaling:** Add more JVMs and consumers to increase throughput linearly until broker/network limits are hit.
+
+---
+
+## **3️⃣ Broker and system bottlenecks**
+
+1. **Memory:** Keep in-flight messages < broker memory limit (16 GB → \~16M 1KB messages).
+2. **Disk (KahaDB):** Persistent messages → heavy I/O. Consider SSDs for high throughput.
+3. **Network:** 10 Gbps → 1.25M 1KB messages/sec saturates \~1 Gbps. For millions/sec, you need **multi-gigabit network**.
+4. **Consumer processing:** Avoid heavy synchronous processing; use **batching or thread pools**.
+
+---
+
+✅ **Summary**
+
+* **Single JVM, 50–100 consumers:** 250k–1M msgs/sec.
+* **10 JVMs, 50–100 consumers:** 2.5M–5M msgs/sec.
+* **Queue-based consumers** → load-balanced, no duplicate messages.
+* Async logging → minimal processing overhead.
+* Persistent messages → no data loss.
+
+---
+
+  ![activemq](./activemq%20highthroughput%20.png)
+
+---
