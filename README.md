@@ -8,11 +8,13 @@ here recheck pending
 
 ---
 netstat -ano | findstr 61616
+---
   TCP    0.0.0.0:61616          0.0.0.0:0              LISTENING       27440
   TCP    127.0.0.1:61616        127.0.0.1:65185        ESTABLISHED     27440
   TCP    127.0.0.1:65185        127.0.0.1:61616        ESTABLISHED     12984
   TCP    [::]:61616             [::]:0                 LISTENING       27440
 
+---
   to stop this cmd>  netstat -ano | findstr LISTENING | findstr 61616
 ---
 *** it’s **high-throughput + no-loss + scalable**:
